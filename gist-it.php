@@ -2,7 +2,7 @@
 /*
 Plugin Name: gist-it
 Plugin URI: http://pomoti.com/gist-it
-Description: Easy posting of code and syntax highlights via <a href="http://gist.github.com/">Gist</a>.
+Description: Send the code to <a href="http://gist.github.com/">Gist</a> to use version control and syntax highlight of embed.
 Author: Dirceu Jr
 Version: 0.2
 Author URI: http://pomoti.com/sobre-os-autores#Dirceu
