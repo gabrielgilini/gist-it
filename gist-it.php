@@ -4,74 +4,89 @@ Plugin Name: gist-it
 Plugin URI: http://pomoti.com/gist-it
 Description: Easy posting of code and syntax highlights via <a href="http://gist.github.com/">Gist</a>.
 Author: Dirceu Jr
-Version: 0.1
+Version: 0.2
 Author URI: http://pomoti.com/sobre-os-autores#Dirceu
 
-Copyright (C) 2008 Dirceu Jr
+Copyright (c) 2008 Dirceu Jr
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
 // post code, return gist-id
-function gi_postGist( $txt, $lang, $ch ) {
-	// send
-	curl_setopt($ch, CURLOPT_URL, 'http://gist.github.com/gists');
-	$post['file_name[gistfile1]']	= '';
-	$post['file_contents[gistfile1]']	= gi_codeFormat($txt);
-	$post['file_ext[gistfile1]']	= '.'.gi_mapFormat($lang);
-	
+function gi_postGist( $id = '', $txt, $lang, $ch ) {
+	// put
+	if ($id == '') {
+		$post['file_name[gistfile1]']		= '';
+		$post['file_contents[gistfile1]']	= gi_codeFormat($txt);
+		$post['file_ext[gistfile1]']		= '.'.gi_mapFormat($lang);
+		curl_setopt($ch, CURLOPT_URL, 'http://gist.github.com/gists');
+	} else { // edit
+		$post['file_name[gistfile1.'.$lang.']']		= '';
+		$post['_method']							= 'put';
+		$post['file_contents[gistfile1.'.$lang.']']	= gi_codeFormat($txt);
+		$post['file_ext[gistfile1.'.$lang.']']		= '.'.gi_mapFormat($lang);
+		curl_setopt($ch, CURLOPT_URL, 'http://gist.github.com/gists/'.$id);
+	}
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 	$result = curl_exec($ch);
 	
 	// retrive id
-	preg_match('/http:\/\/gist\.github\.com\/([^"]*)/', $result, $id);
+	preg_match('/http:\/\/gist\.github\.com\/([^"]*)/', $result, $nid);
 	
 	// return 0 if /error/
-	if (count($id) == 2) {
-		return $id[1];
+	if (count($nid) == 2) {
+		return $nid[1];
 	} else {
 		return 0;
 	}
 }
 
-// clear code
-// HEY: that probably will crash something at some point
+// HEY: that's stupid
 function gi_codeFormat( $code ) {
 	$code = str_replace('\\\'', '\'', $code);
 	$code = str_replace('\"', '"', $code);
 	return $code;
 }
 
-// translate geeky language to more geeky language
+// translate geeky language to more geek language
 function gi_mapFormat( $format ) {
 	$sugar = array('ruby','rb','c#','c-sharp','csharp','delphi','pascal','python','py','jscript','javascript','vb.net');
 	$salt = array('rbx','rbx','cs','cs','cs','pas','pas','sc','sc','js','js','bas');
 	
-	if (array_search($format, $sugar)) {
+	$has = array_search($format, $sugar);
+	if ($has) {
 		$format = $salt[$has];
 	}
 	
 	return $format;
 }
 
-// match [sourcecode]. post to postGist. replace to [gist='GIST-ID']
-function gi_matchSrc( $content ) {
+// match [sourcecode]. post to gist
+function gi_matchGist( $content ) {
 	// start curl session
 	$ch = curl_init();
 	
-	if (get_option('gi_login') == '' || get_option('gi_password')) {
+	if (get_option('gi_login') && get_option('gi_password')) {
 		// login into gist
 		curl_setopt($ch, CURLOPT_URL, 'https://gist.github.com/session');
 		curl_setopt($ch, CURLOPT_POST, true);
@@ -86,19 +101,18 @@ function gi_matchSrc( $content ) {
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $login_post);
 		curl_exec($ch);
 	}
-	
+		
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
-	$regex .= '\\\\';
-	$regex .= '([\'"])([^\'"]*)';
-	$regex .= '\\\\';
-	$regex .= '\3\](.*?)\[\/\1e\]/si';
+	$regex .= '\\\\[\'"]([^\'"\\\\]*)';
+	$regex .= '([^\]]*gist=\\\\[\'"]([^\'"\\\\]*))?';
+	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
 	foreach($matches as $match) {
-		$gistID = gi_postGist($match[5], $match[4], $ch);
-		if ($gistID != 0) {
-			$content = str_replace($match[0], '[gist=\''.$gistID.'\']', $content);
+		$gistID = gi_postGist($match[5], $match[6], $match[3], $ch);
+		if ($gistID != 0 && $match[5] == '') {
+			$content = preg_replace('/\['.$match[1].$match[2].'\\\\[\'"]'.$match[3].'\\\\[\'"]\]/', '['.$match[1].$match[2].'"'.$match[3].'" gist="'.$gistID.'"]', $content);
 		}
 	}
 	
@@ -108,14 +122,40 @@ function gi_matchSrc( $content ) {
 	return $content;	
 }
 
-// match [gist='GIST-ID'] and replace for JS
-function gi_replaceSrc( $content ) {
-	$regex = '/\[gist=([\'"])([^\'"]*)\1\]/si';
+function gi_updateFromGist($content) {
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	
-	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );	
+	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
+	$regex .= '[\'"]([^\'"]*)';
+	$regex .= '([^\]]*gist=[\'"]([^\'"]*))';
+	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
+	
+	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
 	foreach($matches as $match) {
-		$content = str_replace($match[0], '<script src="http://gist.github.com/'.$match[2].'.js"></script>', $content);
+		curl_setopt($ch, CURLOPT_URL, 'http://gist.github.com/'.$match[5].'.txt');
+		$src = curl_exec($ch);
+		
+		$content = str_replace($match[0], '['.$match[1].$match[2].'"'.$match[3].'" gist="'.$match[5].'"]'.$src.'[/'.$match[1].'e]', $content);
+	}
+
+	curl_close($ch);
+	return $content;
+}
+
+// match gist='GIST-ID' and replace for JS
+function gi_showJS( $content ) {
+	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
+	$regex .= '[\'"]([^\'"]*)';
+	$regex .= '([^\]]*gist=[\'"]([^\'"]*))?';
+	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
+	
+	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
+	
+	foreach($matches as $match) {
+		$content = str_replace($match[0], '<script src="http://gist.github.com/'.$match[5].'.js"></script>', $content);
 	}
 	
 	return $content;
@@ -151,10 +191,10 @@ function gi_addconfig() {
 }
 
 // VRUUUUUM
-add_action( 'content_save_pre', 'gi_matchSrc' );
-add_action( 'the_content', 'gi_replaceSrc' );
-add_action('admin_menu', 'gi_addconfig');
-
+add_action( 'content_edit_pre', 'gi_updateFromGist' );
+add_action( 'content_save_pre', 'gi_matchGist' );
+add_action( 'the_content', 'gi_showJS' );
+add_action( 'admin_menu', 'gi_addconfig' );
 /*
 
 Plain Text: .txt
