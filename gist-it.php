@@ -99,7 +99,6 @@ function gi_matchGist( $content ) {
 		$login_post['login']	= get_option('gi_login');
 		$login_post['password']	= get_option('gi_password');
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $login_post);
-		curl_exec($ch);
 	}
 		
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
@@ -108,6 +107,10 @@ function gi_matchGist( $content ) {
 	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
+	
+	if (count($matches) > 0) {
+		curl_exec($ch);
+	}
 	
 	foreach($matches as $match) {
 		$gistID = gi_postGist($match[5], $match[6], $match[3], $ch);
