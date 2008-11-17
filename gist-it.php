@@ -4,7 +4,7 @@ Plugin Name: gist-it
 Plugin URI: http://pomoti.com/gist-it
 Description: Send the code to <a href="http://gist.github.com/">Gist</a> to use version control and syntax highlight of embed.
 Author: Dirceu Jr
-Version: 0.2
+Version: 0.3
 Author URI: http://pomoti.com/sobre-os-autores#Dirceu
 
 Copyright (c) 2008 Dirceu Jr
@@ -71,9 +71,9 @@ function gi_mapFormat( $format ) {
 	$sugar = array('ruby','rb','c#','c-sharp','csharp','delphi','pascal','python','py','jscript','javascript','vb.net');
 	$salt = array('rbx','rbx','cs','cs','cs','pas','pas','sc','sc','js','js','bas');
 	
-	$has = array_search($format, $sugar);
-	if ($has) {
-		$format = $salt[$has];
+	$haz = in_array($format, $sugar);
+	if ($haz) {
+		$format = $salt[$haz];
 	}
 	
 	return $format;
@@ -129,8 +129,8 @@ function gi_updateFromGist($content) {
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
-	$regex .= '\\\\[\'"]([^\'"\\\\]*)';
-	$regex .= '([^\]]*gist=\\\\[\'"]([^\'"\\\\]*))?';
+	$regex .= '[\'"]([^\'"]*)';
+	$regex .= '([^\]]*gist=[\'"]([^\'"]*))?';
 	$regex .= '[^\]]*\](.*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
