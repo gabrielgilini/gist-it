@@ -63,9 +63,7 @@ function gi_postGist( $id = '', $txt, $lang, $ch ) {
 
 // HEY: that's stupid
 function gi_codeFormat( $code ) {
-	$code = str_replace('\\\'', '\'', $code);
-	$code = str_replace('\"', '"', $code);
-	return $code;
+	return html_entity_decode(stripslashes($code));
 }
 
 // translate geeky language to more geek language
@@ -100,11 +98,11 @@ function gi_matchGist( $content ) {
 		$login_post['password']	= get_option('gi_password');
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $login_post);
 	}
-		
+	
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
 	$regex .= '\\\\[\'"]([^\'"\\\\]*)';
 	$regex .= '([^\]]*gist=\\\\[\'"]([^\'"\\\\]*))?';
-	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
+	$regex .= '[^\]]*\](.*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
@@ -131,9 +129,9 @@ function gi_updateFromGist($content) {
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
-	$regex .= '[\'"]([^\'"]*)';
-	$regex .= '([^\]]*gist=[\'"]([^\'"]*))';
-	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
+	$regex .= '\\\\[\'"]([^\'"\\\\]*)';
+	$regex .= '([^\]]*gist=\\\\[\'"]([^\'"\\\\]*))?';
+	$regex .= '[^\]]*\](.*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
@@ -153,7 +151,7 @@ function gi_showJS( $content ) {
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
 	$regex .= '[\'"]([^\'"]*)';
 	$regex .= '([^\]]*gist=[\'"]([^\'"]*))?';
-	$regex .= '[^\]]*\]([^\]]*)\[\/\1e\]/si';
+	$regex .= '[^\]]*\](.*)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
