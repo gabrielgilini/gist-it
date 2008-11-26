@@ -102,7 +102,7 @@ function gi_matchGist( $content ) {
 	$regex = '/\[(sourcecod|sourc|cod)(e language=|e lang=|e=)';
 	$regex .= '\\\\[\'"]([^\'"\\\\]*)';
 	$regex .= '([^\]]*gist=\\\\[\'"]([^\'"\\\\]*))?';
-	$regex .= '[^\]]*\](.*)\[\/\1e\]/si';
+	$regex .= '[^\]]*\](.*?)\[\/\1e\]/si';
 	
 	preg_match_all( $regex, $content, $matches, PREG_SET_ORDER );
 	
